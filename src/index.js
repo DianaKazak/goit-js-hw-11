@@ -12,27 +12,19 @@ const input = document.querySelector(".searchQuery")
 const form = document.querySelector(".search-form")
 const list = document.querySelector(".list")
 
-// const laadMoreBtn = document.querySelector(".load-more")
-
 window.addEventListener('scroll', throttle(checkPosition, 250))
 window.addEventListener('resize', throttle(checkPosition, 250))
 form.addEventListener("submit", searchFromhUser)
-// laadMoreBtn.addEventListener("click", searchOnLoadMoreBtn)
 
 let gallery = new SimpleLightbox('.gallery a'); 
  
 let pageAmount = 1;
 
 function searchFromhUser(event) {
-    // laadMoreBtn.classList.add("is-hidden")
+
     event.preventDefault()
     const name = event.currentTarget.searchQuery.value
     pageAmount = 1;
-
-    // if (!name) {
-    //     Notify.failure("Введіть, будь ласка, ваш запит", { position: 'center-center'})
-    //     return
-    // }
 
     fetchForUser(name, pageAmount)
         .then((foto) => {
@@ -46,7 +38,6 @@ function searchFromhUser(event) {
 
                 addFotoToUserInterface(card)
              
-                // laadMoreBtn.classList.remove("is-hidden")
 
                 gallery.refresh()
 
@@ -79,7 +70,7 @@ function searchOnLoadMoreBtn() {
         .then((foto) => {
             const card = foto.hits
             const totalPageAmount = Math.ceil(foto.totalHits / foto.hits.length-1)
-            //console.log(totalPageAmount);
+            
 
             if (pageAmount <= totalPageAmount) {
 
@@ -88,7 +79,7 @@ function searchOnLoadMoreBtn() {
                 gallery.refresh()
              
             } else  Notify.warning("We're sorry, but you've reached the end of search results.",  { position: 'center-bottom'})
-            // }   
+              
         })
         .catch(error => { console.log("Oops, there is error") })
         .finally(() => form.reset());
@@ -156,10 +147,6 @@ function addFotoToUserInterface(card) {
 
 
 
-
-//Пагінація
-// При повторному сабміті форми кнопка спочатку ховається,
-//     а після запиту знову відображається.
 
 
 
