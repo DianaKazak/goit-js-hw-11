@@ -1,152 +1,112 @@
 
-import { Notify } from 'notiflix/build/notiflix-notify-aio';
-import SimpleLightbox from "simplelightbox";
-import "simplelightbox/dist/simple-lightbox.min.css";
-import throttle from 'lodash.throttle';
-import axios from 'axios';
+import './css/styles.css';
+import { fetchGallery } from './js/galerry';
+import Notiflix from 'notiflix';
+
+const form = document.querySelector('.search-form');
+const galleryList = document.querySelector('.gallery');
+const btnMore = document.querySelector('.load-more')
+
+btnMore.style.display = 'none';
+let page = 0;
+
+form.addEventListener('submit', createGalerry);
+btnMore.addEventListener('click', loadMore);
 
 
-const API_KEY = '33139428-a4880fd896903b0937526f617';
-const URL = 'https://pixabay.com/api/'
-const input = document.querySelector(".searchQuery")
-const form = document.querySelector(".search-form")
-const list = document.querySelector(".list")
+async function createGalerry(evt) {
+    evt.preventDefault();
 
-window.addEventListener('scroll', throttle(checkPosition, 250))
-window.addEventListener('resize', throttle(checkPosition, 250))
-form.addEventListener("submit", searchFromhUser)
+    let inputValue = form.elements.searchQuery.value.trim();
+    page = 1;
+    cleanGallery();
+    btnMore.style.display = 'none';
 
-let gallery = new SimpleLightbox('.gallery a'); 
- 
-let pageAmount = 1;
-
-function searchFromhUser(event) {
-
-    event.preventDefault()
-    const name = event.currentTarget.searchQuery.value
-    pageAmount = 1;
-
-    fetchForUser(name, pageAmount)
-        .then((foto) => {
-            const card = foto.hits
-            
-            if (card.length === 0) {
-                Notify.failure("Sorry, there are no images matching your search query. Please try again.", { position: 'center-center'})
-            } else {
-                list.innerHTML = ""
-                Notify.info(`Hooray! We found ${foto.totalHits} images.`);
-
-                addFotoToUserInterface(card)
-             
-
-                gallery.refresh()
-
-                pageAmount += 1;
-            }   
-        })
-        .catch(error => { console.log("Oops, there is error") })
-        .finally(() => form.reset());
-
-}
-
-function checkPosition() {
-  const height = document.body.offsetHeight
-  const screenHeight = window.innerHeight
-  const scrolled = window.scrollY
-
-  const threshold = height - screenHeight /4
-  const position = scrolled + screenHeight
-
-      if (position >= threshold) {
-    searchOnLoadMoreBtn()
-  }
-}
-
-function searchOnLoadMoreBtn() {
-    const name = input.value
-    pageAmount += 1;
-
-    fetchForUser(name, pageAmount)
-        .then((foto) => {
-            const card = foto.hits
-            const totalPageAmount = Math.ceil(foto.totalHits / foto.hits.length-1)
-            
-
-            if (pageAmount <= totalPageAmount) {
-
-                addFotoToUserInterface(card)
-
-                gallery.refresh()
-             
-            } else  Notify.warning("We're sorry, but you've reached the end of search results.",  { position: 'center-bottom'})
-              
-        })
-        .catch(error => { console.log("Oops, there is error") })
-        .finally(() => form.reset());
-
-}
-
-
-
-async function fetchForUser(name, pageAmount) {
-   const response =  await axios.get(`${URL}?key=${API_KEY}&q=${name}&image_type=photo&orientation=horizontal&safesearch=true&per_page=40&page=${pageAmount}`)  
-    return await response.data;
-
-}
-
-
-function addFotoToUserInterface(card) {
-            
-    for (let i = 0; i < card.length; i += 1) {
-
-        const imageeLarge = card[i].largeImageURL   
-        const image = card[i].webformatURL
-        const description = card[i].tags
-        const likesAmount = card[i].likes
-        const viewsAmount = card[i].views
-        const commentsAmount = card[i].comments
-        const downloadsAmount = card[i].downloads
-
-        list.innerHTML += `<li class="item">
-        <div class="gallery">
-        <a class"link" href="${imageeLarge}">
-        <img class="image" src="${image}" alt="${description}" loading="lazy" width="288" height="187">
-        </a>
-        </div>
-    <ul class="info">
-        <li>
-        <p>Likes</p>
-        <p class="amount">${likesAmount}</p>
-        </li>
-        <li>
-        <p>Views</p>
-        <p class="amount">${viewsAmount}</p>
-        </li>
-        <li>
-        <p>Comments</p>
-        <p class="amount">${commentsAmount}</p>
-        </li>
-        <li>
-        <p>Downloads</p>
-        <p class="amount">${downloadsAmount}</p>
-        </li>
-    </ul>
-    <li>`
+    if (!inputValue) {
+        Notiflix.Notify.warning('Please enter a search term');
+        cleanGallery();
+        return;
     }
 
-    const { height: cardHeight } = document
-    .querySelector(".gallery")
-    .firstElementChild.getBoundingClientRect();
+    try {
+        const pages = await fetchGallery(inputValue, page)
+        let totalHits = pages.data.totalHits;
+        btnMore.style.display = 'block';
+        renderImage(pages.data.hits)
+        
+        Notiflix.Notify.success(`Hooray! We found ${totalHits} images.`)
+    }
+    catch (err) {
+        Notiflix.Notify.failure("Sorry, there are no images matching your search query. Please try again.");
+    }
 
-    window.scrollBy({
-    top: cardHeight * 2,
-    behavior: "smooth",
-    });
+};
+
+function renderImage(images) {
+    const markup = images
+        .map(({ webformatURL,
+            largeImageURL,
+            tags,
+            likes,
+            views,
+            comments,
+            downloads }) => {
+            return `<div class="photo-card">
+      <a href="${largeImageURL}">
+      <img class="photo" src="${webformatURL}" 
+      alt="${tags}" loading="lazy"/>
+      <div class="info">
+      <p class="info-item">
+      <b>Likes</b>
+      <span class="info-item"> ${likes}</span>
+      </p>
+       <p class="info-item">
+       <b>Views</b> <span class="info-item">${views}</span>  
+       </p>
+       <p class="info-item">
+           <b>Comments</b>
+           <span class="info-item">${comments}</span>  
+       </p>
+       <p class="info-item">
+           <b>Downloads</b>
+           <span class="info-item">${downloads}</span> 
+       </p>
+    </div>
+      </a>
+    
+    </div>`;
+    
+})
+    .join("");  
+    return galleryList.insertAdjacentHTML('beforeend', markup);
 }
 
 
+async function loadMore() {
+    page++;
+    const inputValue = form.elements.searchQuery.value.trim();
+    try {
+        const pages = await fetchGallery(inputValue, page);
+        const pageLast = pages.data.totalHits;
+        if (page > pageLast) { 
+            Notiflix.Notify.info("We're sorry, but you've reached the end of search results.")
+            form.reset();
+            btnMore.style.display = 'none';
+        }
+        renderImage(pages.data.hits)
+        btnMore.style.display = 'block';
+    }
+    catch (error) {
+  Notiflix.Notify.failure("Sorry, there are no images matching your search query. Please try again.");
+}};
 
 
 
+
+
+//////////////////
+function cleanGallery() { 
+    galleryList.innerHTML = '';
+};
 
 
